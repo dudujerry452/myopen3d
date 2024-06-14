@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
 
     //auto renderer_ptr = std::make_shared<glsl::TriangleMeshRenderer>();
 
-    cout << "Window Created " << endl;
+    cout << "Window Created" << endl;
 
     glewExperimental = true;
     if (glewInit() != GLEW_OK) {

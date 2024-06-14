@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.18)
 
 project(MyOpen3D LANGUAGES C CXX)
 
-if(__APPLE__)
+if(APPLE)
 
     set(Open3D_DIR "~/Codes/open3d/open3d-darwin/lib/cmake/Open3D")
 
