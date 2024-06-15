@@ -7,6 +7,7 @@
 #include <fstream>
 #include <math.h>
 #include <algorithm>
+#include <random>
 
 #include "MyRenderFunction.h"
 
@@ -103,6 +104,8 @@ bool getInteractivePart(const std::vector<Eigen::Vector3d>& geo,
 
 int main(int argc, char *argv[]) {
 
+    std::mt19937 random_generator(42);
+
     std::string data;
     std::vector< Eigen::Vector4d> spheres_coor; 
 
@@ -118,19 +121,30 @@ int main(int argc, char *argv[]) {
     ss>>n>>step;//输入时间增加步长，以秒为单位
     double biggest = 0;
     up(0,3,i) ss>>k[i];
+    Eigen::Vector4d bias;
+    ss>>bias(0)>>bias(1)>>bias(2); // 输入坐标的偏移量
+    bias(3) = 0;
     up(0,n-1,i){
         Eigen::Vector4d v4d;
         up(0,3,j) {
             ss>>v4d(j);
+            v4d(j) += bias(j);
             v4d[j] *= k[j];
         }
         spheres_coor.push_back(v4d);
         biggest = (v4d(3)>biggest)?v4d(3):biggest;
     }
     for (auto &v : spheres_coor) v(3) -= biggest;
-
     //cube->ComputeVertexNormals();
     //cube->PaintUniformColor({1.0, 0.0, 0.0});
+
+    std::vector< Eigen::Vector4d> points_coor;
+    int n2;
+    ss>>n2;
+    points_coor.resize(n2+1);
+    up(0, n2-1, i){
+        up(0,3,j) ss>>points_coor[i](j);
+    }
 
 
     vector<std::shared_ptr<TriangleMesh> > spheres;
@@ -143,30 +157,43 @@ int main(int argc, char *argv[]) {
 
     MyVisualizer scene;
 
-
-    auto begin = chnow();
-    int64_t duration = 0;
-    int64_t frame = 0;
-
     std::vector<std::shared_ptr<PointCloud> > inter_points;
 
-    std::function<bool(MyVisualizer *)> update = [&inter_points, &spheres,step,k,&spheres_coor,n, &frame, &duration, &begin](MyVisualizer* vis){    
+    std::vector<std::shared_ptr<PointCloud> > draw_points_group;
+    std::vector<std::shared_ptr<PointCloud> > temp_draw_points_group;
+    // Construct points to draw
+    std::uniform_real_distribution<double> dis(0.0, 2.0*M_PI);
+    for(auto& v : points_coor){
+        std::vector<Eigen::Vector3d> v_group;
+        v_group.emplace_back(v.head<3>());
+        up(0,99,i){
+            double th = dis(random_generator);
+            double ph = dis(random_generator);
+            double co = cos(ph);
+            v_group.emplace_back(co*sin(th),co*cos(th),sin(ph));
+        }
+        draw_points_group.emplace_back(std::make_shared<PointCloud>(v_group));
+        temp_draw_points_group.emplace_back(std::make_shared<PointCloud>(v_group));
+    }
+
+    std::function<bool(MyVisualizer *)> update = [&points_coor, &temp_draw_points_group, &draw_points_group, &biggest, &inter_points, &spheres,step,k,&spheres_coor,n](MyVisualizer* vis){    
         if(!vis) return false;
-        
-        auto end = chnow(); 
-        duration += mildiff(end - begin);
-        begin = end;
-        if(duration > animation_delay) {duration = 0; frame ++;}
-        else return true;
+
+        double current_time = biggest + vis->GetAnimationFrame()*step;
+        if(vis->PushKeyDown()){
+            printf("[Press \"Down\" Key] Current Time : %lf s (x%lf)\n", current_time, step);
+        }
+        if(!vis->IsNextFrame()) return false;
 
         auto view = vis->GetViewControl();
         eye_pos = view.GetEye().cast<double>();
         std::sort(spheres_coor.begin(), spheres_coor.end(), sphereCmp);
 
         up(0,n-1,i){
-            spheres_coor[i](3) += step*k[3];
-            double radius = spheres_coor[i](3);
+
+            double radius = spheres_coor[i](3) + vis->GetAnimationFrame()*step*k[3];
             if(radius <= 0) radius = init_radius;
+            
             auto sph = TriangleMesh::CreateSphere(radius,resolution);
             spheres[i]->vertices_ = sph->vertices_;
             spheres[i]->triangles_ = sph->triangles_;
@@ -184,19 +211,39 @@ int main(int argc, char *argv[]) {
         inter_points.clear();
 
         up(0,n-1,i){
+            double radius1 = spheres_coor[i](3) + vis->GetAnimationFrame()*step*k[3];
+
             up(i+1,n-1,j){
-                if(getDistance(spheres_coor[i].head<3>(),spheres_coor[j].head<3>()) > spheres_coor[i](3)+spheres_coor[j](3)) continue;
+                double radius2 = spheres_coor[j](3) + vis->GetAnimationFrame()*step*k[3];
+
+                if(getDistance(spheres_coor[i].head<3>(),spheres_coor[j].head<3>()) > radius1 + radius2) continue;
                 std::vector<Eigen::Vector3d> result;
                 if(getInteractivePart(spheres[i]->vertices_, 
                             spheres_coor[i].head<3>(), spheres_coor[j].head<3>(),
-                            spheres_coor[i](3), spheres_coor[j](3), 
+                            radius1, radius2, 
                              result)){
                     inter_points.emplace_back(std::make_shared<PointCloud>(result));
                     inter_points.back()->PaintUniformColor({0,0,0});
-                    vis->AddGeometryA(inter_points.back(), false, '0');
+                    vis->AddGeometryA(inter_points.back(), false, '0', false);
                     
                 }
             }
+        }
+
+        for(auto& pc : inter_points){
+            //pc->Scale(10, pc->points_[0]);
+        }
+
+        int index = 0;
+        for(auto& v : draw_points_group){
+            v->points_ = temp_draw_points_group[index]->points_;
+            v->Scale(10*sin((vis->GetAnimationFrame())/5.0),v->points_[0]);
+            if(abs(current_time - points_coor[index](3)) < step){
+                vis->AnimationPause();
+                printf("[Preset Solution Time Reached] Target Time : %lf s\n", points_coor[index](3));
+                points_coor[index](3) = -9999.0;
+            }
+            index++;
         }
         
         vis->UpdateGeometry();
@@ -207,20 +254,20 @@ int main(int argc, char *argv[]) {
     auto coordinate_frame = TriangleMesh::CreateCoordinateFrame();
 
     if(!scene.CreateVisualizerWindow("Scene", 1600, 900)){
-        std:: cout<<"Window Create Failed" << endl;
+        std:: cout<<"[Init Error] Window Create Failed" << endl;
         return 1;
     }
 
     //auto renderer_ptr = std::make_shared<glsl::TriangleMeshRenderer>();
 
-    cout << "Window Created" << endl;
+    cout << "[Init] Window Created" << endl;
 
     glewExperimental = true;
     if (glewInit() != GLEW_OK) {
         utility::LogWarning("Failed to initialize GLEW.");
         return 1;
     }
-    std :: cout << "InitOpenGL Finished" << endl;
+    std :: cout << "[Init] InitOpenGL Succeed" << endl;
 
     /*if (glewInit() != GLEW_OK) {
         std:: cout << "GLEW Intilization Failed" << std::endl;
@@ -228,23 +275,26 @@ int main(int argc, char *argv[]) {
     }
     cout << "Window Created " << endl;*/
 
-    scene.AddGeometry(coordinate_frame);
+    scene.AddGeometry(coordinate_frame, true, false);
 
-    cout << "AddGeometry Succeed " << endl;
+    cout << "[Init] AddGeometry Succeed " << endl;
 
-    auto lineset = getFrameCorrdinate(4,4,0.5,0.5);
-    scene.AddGeometry(lineset);
+    auto lineset = getFrameCorrdinate(1000,1000,100,100);
+    scene.AddGeometry(lineset,false,false);
 
-    cout << "Add Succeed " << endl;
+    cout << "[Init] Add Frame Corrdinate Succeed " << endl;
 
-    //scene.SetCurrentRenderer("MyTriangleRenderer");
     up(0,n-1,i){
         scene.AddGeometry(spheres[i]);
     }
-    //scene.ResetCurrentRenderer();
-    cout << "Custom Balls Succeed " << endl;
+    cout << "[Init] Add Custom Balls Succeed " << endl;
+
+    up(0,n2-1,i){
+        scene.AddGeometryA(draw_points_group[i], false, '0', true);
+    }
+
     scene.RegisterAnimationCallback(update);
-    cout << "Register Succeed " << endl;
+    cout << "[Init] Animation Function Register Succeed " << endl;
     scene.Run();
     scene.DestroyVisualizerWindow();
 

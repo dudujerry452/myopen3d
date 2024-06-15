@@ -71,13 +71,13 @@ private:
 namespace myvisualization{
 
 bool MyVisualizer::AddGeometry(std::shared_ptr<open3d::geometry::Geometry> geometry_ptr
-,bool reset_bounding_box) {
-    return AddGeometryA(geometry_ptr, reset_bounding_box, highest_priority+1);
+,bool reset_bounding_box, bool update_geometry) {
+    return AddGeometryA(geometry_ptr, reset_bounding_box, highest_priority+1, update_geometry);
 }
 
 bool MyVisualizer::AddGeometryA(
             std::shared_ptr<geometry::Geometry> geometry_ptr,
-            bool reset_bounding_box, char target_priority){
+            bool reset_bounding_box, char target_priority, bool update_geometry){
 
     std::string ori_name = geometry_ptr->GetName();
     if(ori_name.empty()) ori_name.resize(1);
@@ -176,11 +176,22 @@ bool MyVisualizer::AddGeometryA(
         return false;
     }
 
-    geometry_renderer_ptrs_.insert(renderer_ptr);
-    geometry_ptrs_.insert(geometry_ptr);
     if (reset_bounding_box) {
+        renderer_ptr->SetResetBoundingBox(true);
         view_control_ptr_->FitInGeometry(*geometry_ptr);
     }
+    else{
+        renderer_ptr->SetResetBoundingBox(false);
+    }
+    if(update_geometry) {
+        renderer_ptr->SetUpdate(true);
+    }
+    else{
+        renderer_ptr->SetUpdate(false);
+    }
+
+    geometry_renderer_ptrs_.insert(renderer_ptr);
+    geometry_ptrs_.insert(geometry_ptr);
     open3d::utility::LogDebug(
             "Add geometry and update bounding box to {}",
             view_control_ptr_->GetBoundingBox().GetPrintInfo().c_str());
@@ -794,6 +805,7 @@ bool MyVisualizer::CreateVisualizerWindow(
     UpdateWindowTitle();
 
     is_initialized_ = true;
+    animate_timer = chnow();
     return true;
 }
 
@@ -954,14 +966,21 @@ bool MyVisualizer::UpdateGeometry(
         std::shared_ptr<const geometry::Geometry> geometry_ptr) {
     glfwMakeContextCurrent(window_);
     bool success = true;
-    for (const auto &renderer_ptr : geometry_renderer_ptrs_) {
-        if (geometry_ptr == nullptr ||
-            renderer_ptr->HasGeometry(geometry_ptr)) {
-            success = (success && renderer_ptr->UpdateGeometry());
 
-            view_control_ptr_->FitInGeometry(*renderer_ptr->GetGeometry()); // 每个循环重新计算摄像机位置
+    if (geometry_ptr == nullptr){
+        for (const auto &renderer_ptr : geometry_renderer_ptrs_) {
+            if(renderer_ptr->NeedUpdate()){
+                success = (success && renderer_ptr->UpdateGeometry());  
+            }      
         }
     }
+    else
+        for (const auto &renderer_ptr : geometry_renderer_ptrs_) {
+            
+                if(renderer_ptr->HasGeometry(geometry_ptr) && renderer_ptr->NeedUpdate()) 
+                    success = (success && renderer_ptr->UpdateGeometry());
+            
+        }
     UpdateRender();
     return success;
 }
@@ -1153,11 +1172,48 @@ void MyVisualizer::MouseButtonCallback(GLFWwindow *window,
 
 void MyVisualizer::KeyPressCallback(
         GLFWwindow *window, int key, int scancode, int action, int mods) {
+    bool is_release = false;
+
     if (action == GLFW_RELEASE) {
+        animate_back = false;
+        if(key == GLFW_KEY_DOWN){
+            key_down_press = true;
+        }
         return;
     }
 
     switch (key) {
+        case GLFW_KEY_SPACE:
+            AnimationPause();
+            break;
+        case GLFW_KEY_LEFT:
+            animate_back = true;
+            SetAnimationFrame(GetAnimationFrame()-1);
+            if (bool(animation_callback_func_in_loop_)) {
+                if (animation_callback_func_in_loop_(this)) {
+                    UpdateGeometry();
+                }
+                UpdateRender();
+            }
+            break;
+        case GLFW_KEY_RIGHT:
+            animate_back = true;
+            SetAnimationFrame(GetAnimationFrame()+1);
+            if (bool(animation_callback_func_in_loop_)) {
+                if (animation_callback_func_in_loop_(this)) {
+                    UpdateGeometry();
+                }
+                UpdateRender();
+            }
+            break;
+        case GLFW_KEY_UP:
+            view_control_ptr_->ResetBoundingBox();
+            for (const auto &renderer_ptr : geometry_renderer_ptrs_) {
+                if(renderer_ptr->NeedResetBoundingBox())
+                    view_control_ptr_->FitInGeometry(*renderer_ptr->GetGeometry()); // 每个循环重新计算摄像机位置
+            }
+            break;
+
         case GLFW_KEY_ENTER:
             if (mods & GLFW_MOD_ALT) {
                 if (IsFullScreen()) {

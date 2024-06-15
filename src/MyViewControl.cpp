@@ -35,8 +35,8 @@ const double MyViewControl::FIELD_OF_VIEW_DEFAULT = 60.0;
 const double MyViewControl::FIELD_OF_VIEW_STEP = 5.0;
 
 const double MyViewControl::ZOOM_DEFAULT = 0.7;
-const double MyViewControl::ZOOM_MIN = 0.02;
-const double MyViewControl::ZOOM_MAX = 2.0;
+const double MyViewControl::ZOOM_MIN = 0.01;
+const double MyViewControl::ZOOM_MAX = 10.00;
 const double MyViewControl::ZOOM_STEP = 0.02;
 
 const double MyViewControl::ROTATION_RADIAN_PER_PIXEL = 0.003;

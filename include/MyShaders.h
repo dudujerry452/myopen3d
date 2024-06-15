@@ -164,7 +164,7 @@ public:
     ~MyPhongShader() override { Release(); }
 
 protected:
-    MyPhongShader(const std::string &name) : myglsl::ShaderWrapper(name) {std::cout<<"MyPhongShader" << std::endl;Compile(); std:: cout<<"AfterCompile" << std::endl;}
+    MyPhongShader(const std::string &name) : myglsl::ShaderWrapper(name) {std::cout<<"MyPhongShader" << std::endl;Compile(); }
 
 protected:
     bool Compile() final; // 1 Create and Link program, Compile shaders and Get glAttribution from shaders

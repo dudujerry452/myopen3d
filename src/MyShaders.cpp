@@ -51,18 +51,18 @@ bool MySimpleShaderForLineSet::PrepareBinding(
 }
 
 bool MyPhongShader::Compile() {
-    std:: cout << "Init Compile()" << std::endl;
+    std:: cout << "[Phong Shader] Init Compile() :" << std::endl;
     if (!CompileShaders(MyShaders::PhongVertexShader, NULL, MyShaders::PhongFragmentShader)) {
-        std:: cout << "Compile Failed." << std::endl;
-        PrintShaderWarning("Compiling shaders failed.");
+        std:: cout << "     Compile Failed." << std::endl;
+        PrintShaderWarning("    Compiling shaders failed.");
         return false;
     }
-    std:: cout << "Compile finished." << std::endl;
-    std:: cout << "_program ID = " << program_ << std::endl;
-    std:: cout << "vertex_shader ID = " << vertex_shader_ << std::endl;
+    std:: cout << "     Compile finished." << std::endl;
+    std:: cout << "     _program ID = " << program_ << std::endl;
+    std:: cout << "     vertex_shader ID = " << vertex_shader_ << std::endl;
 
     if(glGetShaderiv == NULL) { 
-        std:: cout << "glew Initilized Failed" << std::endl;
+        std:: cout << "     glew Initilized Failed" << std::endl;
     }
 
     GLint compiled = GL_FALSE;
@@ -74,11 +74,11 @@ bool MyPhongShader::Compile() {
         glGetShaderiv(vertex_shader_, GL_INFO_LOG_LENGTH, &logLength);
         GLchar* log = (GLchar*)malloc(logLength);
         glGetShaderInfoLog(vertex_shader_, logLength, NULL, log);
-        printf("Shader compilation log: %s\n", log);
+        printf("        Shader compilation log: %s\n", log);
         free(log);
     }
     else{
-        std:: cout << "vertex shader compile succeed " << vertex_shader_ << std::endl;
+        std:: cout << "     Vertex shader compile succeed " << vertex_shader_ << std::endl;
     }
 
 
@@ -99,7 +99,7 @@ bool MyPhongShader::Compile() {
     light_specular_shininess_ =
             glGetUniformLocation(program_, "light_specular_shininess_4");
     light_ambient_ = glGetUniformLocation(program_, "light_ambient");
-    std:: cout << "After Compile" << std::endl;
+    std:: cout << "[Phong Shader] Compile Finished" << std::endl;
     return true;
 }
 

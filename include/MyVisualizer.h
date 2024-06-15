@@ -34,8 +34,27 @@ public:
 
     bool AddGeometryA(
             std::shared_ptr<geometry::Geometry> geometry_ptr,
-            bool reset_bounding_box, char target_priority);
+            bool reset_bounding_box, char target_priority, bool update_geometry = true);
 
+    void AnimationPause() {animate_stop = !animate_stop;}
+    void SetAnimationSpeedRate(int64_t milsecond) {animate_refresh_rate = milsecond;}
+    void SetAnimationFrame(int64_t frame){animate_current_frame = frame>0?frame:0;}
+
+    inline int64_t GetAnimationFrame(){return animate_current_frame;}
+
+    inline bool PushKeyDown() {bool ret = key_down_press; key_down_press = false; return ret;}
+
+    bool IsNextFrame(){
+        if(animate_stop || animate_back) return false;
+        auto now = chnow();
+        int64_t dur = mildiff(now - animate_timer);
+        if(dur >= animate_refresh_rate){
+            animate_timer = chnow();
+            animate_current_frame ++;
+            return true;
+        }
+        return false;
+    }
 protected:
     struct SetCmp{
         bool operator()(const std::shared_ptr<const geometry::Geometry>& left, 
@@ -60,11 +79,20 @@ protected:
         }
     };
 
+
 protected:
     std::shared_ptr<myglsl::MyGeometryRenderer> PickRenderer(std::string name);
     std::string current_renderer_name;
 
     char highest_priority;
+
+    int64_t animate_current_frame = 0;
+    bool animate_stop = false;
+    bool animate_back = false;
+    int animate_refresh_rate = 50; // miliseconds per frame
+    std::chrono::steady_clock::time_point animate_timer;
+
+    bool key_down_press = false;
 
 // Below is original part
 
@@ -157,7 +185,7 @@ public:
     /// \param reset_bounding_box Reset viewpoint to view all geometries.
     virtual bool AddGeometry(
             std::shared_ptr<geometry::Geometry> geometry_ptr,
-            bool reset_bounding_box = true);
+            bool reset_bounding_box = true, bool update_geometry = true);
 
     /// \brief Function to remove geometry from the scene.
     ///

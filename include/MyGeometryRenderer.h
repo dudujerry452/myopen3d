@@ -58,12 +58,36 @@ public:
         return geometry_ptr_ == geometry_ptr;
     }
 
+    inline bool NeedUpdate(){
+        if(auto_update) return true;
+        if(require_update){
+            require_update = false;
+            return true;
+        }
+        return false;
+    }
+    inline void SetUpdate(bool option){
+        auto_update = option;
+    }
+
+    inline void SetResetBoundingBox(bool option){
+        reset_bouding_box = option;
+    }
+    inline bool NeedResetBoundingBox(){
+        return reset_bouding_box;
+    }
+    
+
     bool IsVisible() const { return is_visible_; }
     void SetVisible(bool visible) { is_visible_ = visible; };
 
 protected:
     std::shared_ptr<const open3d::geometry::Geometry> geometry_ptr_;
     bool is_visible_ = true;
+
+    bool auto_update = true;
+    bool require_update = false;
+    bool reset_bouding_box = false;
 };
 
 
