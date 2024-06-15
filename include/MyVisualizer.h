@@ -9,6 +9,11 @@
 
 #define __FUNCSIG__ __func__ //替代Visual Studio的获取函数签名的宏
 
+#define up(l,r,i) for(int i=l;i<=r;i++)
+
+#define chnow() std::chrono::steady_clock::now()
+#define mildiff(x) std::chrono::duration_cast<std::chrono::milliseconds>(x).count()
+
 using namespace open3d::visualization::glsl;
 using namespace open3d::visualization;
 using namespace open3d;
@@ -24,7 +29,7 @@ namespace myvisualization{
 class MyVisualizer {
 
 public:
-    bool SetCurrentRenderer(std::string name);
+    bool SetCurrentRenderer(std::string name); // Set Renderer Forcely
     bool ResetCurrentRenderer();
 
     bool AddGeometryA(

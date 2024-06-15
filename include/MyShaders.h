@@ -7,6 +7,9 @@
 
 #define __FUNCSIG__ __func__ //替代Visual Studio的获取函数签名的宏
 
+#define chnow() std::chrono::steady_clock::now()
+#define mildiff(x) std::chrono::duration_cast<std::chrono::milliseconds>(x).count()
+
 using namespace open3d::visualization::glsl;
 using namespace open3d::visualization;
 using namespace open3d;

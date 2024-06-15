@@ -251,6 +251,7 @@ void MyVisualizer::Render(bool render_screen) {
     view_control_ptr_->SetViewMatrices();
 
     if (render_screen) {
+
         if (render_fbo_ != 0) {
             utility::LogWarning("Render framebuffer is not released.");
         }
@@ -280,7 +281,7 @@ void MyVisualizer::Render(bool render_screen) {
     }
 
     glEnable(GL_MULTISAMPLE);
-    glDisable(GL_BLEND);
+    glEnable(GL_BLEND); // Translucent
     auto &background_color = render_option_ptr_->background_color_;
     glClearColor((GLclampf)background_color(0), (GLclampf)background_color(1),
                  (GLclampf)background_color(2), 1.0f);
@@ -290,6 +291,9 @@ void MyVisualizer::Render(bool render_screen) {
     for (const auto &renderer_ptr : geometry_renderer_ptrs_) {
         renderer_ptr->Render(*render_option_ptr_, *view_control_ptr_);
     }
+
+
+
     for (const auto &renderer_ptr : utility_renderer_ptrs_) {
         RenderOption *opt = render_option_ptr_.get();
         auto optIt = utility_renderer_opts_.find(renderer_ptr);
@@ -859,6 +863,7 @@ void MyVisualizer::Run() {
     UpdateWindowTitle();
 
     //std::cout<<"2\n";
+    
     while (bool(animation_callback_func_) ? PollEvents() : WaitEvents()) {
         if (bool(animation_callback_func_in_loop_)) {
             if (animation_callback_func_in_loop_(this)) {
@@ -868,10 +873,11 @@ void MyVisualizer::Run() {
             // Set render flag as dirty anyways, because when we use callback
             // functions, we assume something has been changed in the callback
             // and the redraw event should be triggered.
-            //std::cout<<"4\n";
             UpdateRender();
         }
     }
+
+    
 }
 
 void MyVisualizer::Close() {
@@ -896,12 +902,19 @@ bool MyVisualizer::PollEvents() {
     if (!is_initialized_) {
         return false;
     }
+
     glfwMakeContextCurrent(window_);
+
     if (is_redraw_required_) {
         WindowRefreshCallback(window_);
     }
+
     animation_callback_func_in_loop_ = animation_callback_func_;
+    
     glfwPollEvents();
+
+    
+
     return !glfwWindowShouldClose(window_);
 }
 

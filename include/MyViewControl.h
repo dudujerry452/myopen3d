@@ -10,6 +10,7 @@
 
 #include "math.h"
 
+#define up(l,r,i) for(int i=l;i<=r;i++)
 
 namespace myvisualization {
 

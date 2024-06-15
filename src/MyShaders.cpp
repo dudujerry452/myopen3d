@@ -123,7 +123,8 @@ bool MyPhongShader::BindGeometry(const geometry::Geometry &geometry,
     std::vector<Eigen::Vector3f> points;
     std::vector<Eigen::Vector3f> normals;
     std::vector<Eigen::Vector3f> colors;
-    if (!PrepareBinding(geometry, option, view, points, normals, colors)) {
+    
+    if (!PrepareBinding(geometry, option, view, points, normals, colors)) { // most consuming
         PrintShaderWarning("Binding failed when preparing data.");
         return false;
     }
@@ -141,6 +142,7 @@ bool MyPhongShader::BindGeometry(const geometry::Geometry &geometry,
     glBindBuffer(GL_ARRAY_BUFFER, vertex_color_buffer_);
     glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(Eigen::Vector3f),
                  colors.data(), GL_STATIC_DRAW);
+
     bound_ = true;
     return true;
 }
@@ -148,6 +150,7 @@ bool MyPhongShader::BindGeometry(const geometry::Geometry &geometry,
 bool MyPhongShader::RenderGeometry(const geometry::Geometry &geometry,
                                  const RenderOption &option,
                                  const MyViewControl &view) {
+
     if (!PrepareRendering(geometry, option, view)) {
         PrintShaderWarning("Rendering failed during preparation.");
         return false;
@@ -177,6 +180,7 @@ bool MyPhongShader::RenderGeometry(const geometry::Geometry &geometry,
     glDisableVertexAttribArray(vertex_position_);
     glDisableVertexAttribArray(vertex_normal_);
     glDisableVertexAttribArray(vertex_color_);
+
     return true;
 }
 
@@ -255,7 +259,7 @@ bool MyPhongShaderForTriangleMesh::PrepareRendering(
     }
     SetLighting(view, option);
 
-    glEnable(GL_BLEND);
+    //glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         //glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
@@ -336,6 +340,7 @@ bool MyPhongShaderForTriangleMesh::PrepareBinding(
             }
         }
     }
+
     draw_arrays_mode_ = GL_TRIANGLES;
     draw_arrays_size_ = GLsizei(points.size());
     return true;

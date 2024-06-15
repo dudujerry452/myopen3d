@@ -21,7 +21,13 @@ using std::vector;
 
 #define up(l,r,i) for(int i=l;i<=r;i++)
 
-const int64_t animation_delay = 100;
+#define chnow() std::chrono::steady_clock::now()
+#define mildiff(x) std::chrono::duration_cast<std::chrono::milliseconds>(x).count()
+
+const int64_t animation_delay = 10;
+const int resolution = 50;
+const double minError = 0.05;
+const double init_radius = 0.01;
 
 bool getData(const char * path, std::string * data){
     std::ifstream file(path);
@@ -67,7 +73,6 @@ std::shared_ptr<LineSet> getFrameCorrdinate(double boundx, double boundy, double
     return lineset;
 }
 
-const double minError = 0.01;
 
 inline double getDistance(Eigen::Vector3d o1, Eigen::Vector3d o2){
     auto del = o1 - o2;
@@ -127,11 +132,10 @@ int main(int argc, char *argv[]) {
     //cube->ComputeVertexNormals();
     //cube->PaintUniformColor({1.0, 0.0, 0.0});
 
-    const double init_radius = 0.01;
 
     vector<std::shared_ptr<TriangleMesh> > spheres;
     up(0,n-1,i){
-        spheres.emplace_back(TriangleMesh::CreateSphere(init_radius,100));
+        spheres.emplace_back(TriangleMesh::CreateSphere(init_radius,resolution));
         for (auto& v : spheres[i]->vertices_){
             v += spheres_coor[i].head<3>();
         }
@@ -140,7 +144,7 @@ int main(int argc, char *argv[]) {
     MyVisualizer scene;
 
 
-    auto begin = std::chrono::steady_clock::now();
+    auto begin = chnow();
     int64_t duration = 0;
     int64_t frame = 0;
 
@@ -149,8 +153,8 @@ int main(int argc, char *argv[]) {
     std::function<bool(MyVisualizer *)> update = [&inter_points, &spheres,step,k,&spheres_coor,n, &frame, &duration, &begin](MyVisualizer* vis){    
         if(!vis) return false;
         
-        auto end = std::chrono::steady_clock::now(); 
-        duration += std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        auto end = chnow(); 
+        duration += mildiff(end - begin);
         begin = end;
         if(duration > animation_delay) {duration = 0; frame ++;}
         else return true;
@@ -162,8 +166,10 @@ int main(int argc, char *argv[]) {
         up(0,n-1,i){
             spheres_coor[i](3) += step*k[3];
             double radius = spheres_coor[i](3);
-            if(radius <= 0) continue;
-            spheres[i]->vertices_ = TriangleMesh::CreateSphere(radius,100)->vertices_;
+            if(radius <= 0) radius = init_radius;
+            auto sph = TriangleMesh::CreateSphere(radius,resolution);
+            spheres[i]->vertices_ = sph->vertices_;
+            spheres[i]->triangles_ = sph->triangles_;
             for(auto& v : spheres[i]->vertices_){
                 v += spheres_coor[i].head<3>();
             }
@@ -194,7 +200,6 @@ int main(int argc, char *argv[]) {
         }
         
         vis->UpdateGeometry();
-
         return true;
     };
 
@@ -203,7 +208,7 @@ int main(int argc, char *argv[]) {
 
     if(!scene.CreateVisualizerWindow("Scene", 1600, 900)){
         std:: cout<<"Window Create Failed" << endl;
-        return false;
+        return 1;
     }
 
     //auto renderer_ptr = std::make_shared<glsl::TriangleMeshRenderer>();
@@ -213,7 +218,7 @@ int main(int argc, char *argv[]) {
     glewExperimental = true;
     if (glewInit() != GLEW_OK) {
         utility::LogWarning("Failed to initialize GLEW.");
-        return false;
+        return 1;
     }
     std :: cout << "InitOpenGL Finished" << endl;
 
@@ -232,11 +237,11 @@ int main(int argc, char *argv[]) {
 
     cout << "Add Succeed " << endl;
 
-    scene.SetCurrentRenderer("MyTriangleRenderer");
+    //scene.SetCurrentRenderer("MyTriangleRenderer");
     up(0,n-1,i){
         scene.AddGeometry(spheres[i]);
     }
-    scene.ResetCurrentRenderer();
+    //scene.ResetCurrentRenderer();
     cout << "Custom Balls Succeed " << endl;
     scene.RegisterAnimationCallback(update);
     cout << "Register Succeed " << endl;

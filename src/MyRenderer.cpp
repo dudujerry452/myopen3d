@@ -3,7 +3,6 @@
 
 using namespace myvisualization;
 
-
 bool MyTriangleMeshRenderer::AddGeometry(
         std::shared_ptr<const open3d::geometry::Geometry> geometry_ptr) {
 
@@ -85,16 +84,18 @@ namespace myglsl {
 bool ShaderWrapper::Render(const geometry::Geometry &geometry,
                            const RenderOption &option,
                            const MyViewControl &view) {
+
     if (!compiled_) {
         Compile();
     }
     if (!bound_) {
-        BindGeometry(geometry, option, view);
+        BindGeometry(geometry, option, view); // consume most of the performance
     }
     if (!compiled_ || !bound_) {
         PrintShaderWarning("Something is wrong in compiling or binding.");
         return false;
     }
+
     return RenderGeometry(geometry, option, view);
 }
 
