@@ -117,10 +117,11 @@ int main(int argc, char *argv[]) {
     ss << data;
     int n;
     double step;
-    double k[4];//经纬高程声速单位km
+    double k[5];//经纬高程声速单位km
     ss>>n>>step;//输入时间增加步长，以秒为单位
     double biggest = 0;
     up(0,3,i) ss>>k[i];
+    k[4] = 1/k[3];
     Eigen::Vector4d bias;
     ss>>bias(0)>>bias(1)>>bias(2); // 输入坐标的偏移量
     bias(3) = 0;
@@ -134,7 +135,7 @@ int main(int argc, char *argv[]) {
         spheres_coor.push_back(v4d);
         biggest = (v4d(3)>biggest)?v4d(3):biggest;
     }
-    for (auto &v : spheres_coor) v(3) -= biggest;
+    for (auto &v : spheres_coor) v(3) -= biggest; 
     //cube->ComputeVertexNormals();
     //cube->PaintUniformColor({1.0, 0.0, 0.0});
 
@@ -143,7 +144,12 @@ int main(int argc, char *argv[]) {
     ss>>n2;
     points_coor.resize(n2+1);
     up(0, n2-1, i){
-        up(0,3,j) ss>>points_coor[i](j);
+        up(0,3,j) {
+            ss>>points_coor[i](j);
+            points_coor[i](j) += bias[j];
+            points_coor[i](j) *= k[j];
+        }
+        points_coor[i](3) -= biggest;
     }
 
 
@@ -170,7 +176,7 @@ int main(int argc, char *argv[]) {
             double th = dis(random_generator);
             double ph = dis(random_generator);
             double co = cos(ph);
-            v_group.emplace_back(co*sin(th),co*cos(th),sin(ph));
+            v_group.emplace_back(v(0)+co*sin(th),v(1)+co*cos(th),v(2)+sin(ph));
         }
         draw_points_group.emplace_back(std::make_shared<PointCloud>(v_group));
         temp_draw_points_group.emplace_back(std::make_shared<PointCloud>(v_group));
@@ -179,7 +185,7 @@ int main(int argc, char *argv[]) {
     std::function<bool(MyVisualizer *)> update = [&points_coor, &temp_draw_points_group, &draw_points_group, &biggest, &inter_points, &spheres,step,k,&spheres_coor,n](MyVisualizer* vis){    
         if(!vis) return false;
 
-        double current_time = biggest + vis->GetAnimationFrame()*step;
+        double current_time = biggest*k[4] - vis->GetAnimationFrame()*step;
         if(vis->PushKeyDown()){
             printf("[Press \"Down\" Key] Current Time : %lf s (x%lf)\n", current_time, step);
         }
@@ -230,10 +236,6 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        for(auto& pc : inter_points){
-            //pc->Scale(10, pc->points_[0]);
-        }
-
         int index = 0;
         for(auto& v : draw_points_group){
             v->points_ = temp_draw_points_group[index]->points_;
@@ -241,7 +243,7 @@ int main(int argc, char *argv[]) {
             if(abs(current_time - points_coor[index](3)) < step){
                 vis->AnimationPause();
                 printf("[Preset Solution Time Reached] Target Time : %lf s\n", points_coor[index](3));
-                points_coor[index](3) = -9999.0;
+                points_coor[index](3) = 9999.0;
             }
             index++;
         }
