@@ -1,4 +1,5 @@
 #include "MyVisualizer.h"
+#include "m_util.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <Eigen/Core>
@@ -8,11 +9,6 @@
 #include <algorithm>
 
 #define NOMINMAX
-
-#ifdef __APPLE__
-    using std::max;
-    using std::min;
-#endif 
 
 using namespace open3d::visualization;
 using namespace open3d;
@@ -84,7 +80,7 @@ bool MyVisualizer::AddGeometryA(
     ori_name[0] = target_priority;
     geometry_ptr->SetName(ori_name);
 
-    highest_priority = (max)(highest_priority, target_priority);
+    highest_priority = (m_max)(highest_priority, target_priority);
 
     if (!is_initialized_) {
             return false;
@@ -559,7 +555,7 @@ void MyVisualizer::CaptureDepthImage(const std::string &filename /* = ""*/,
                     2.0 * z_near * z_far /
                     (z_far + z_near -
                      (2.0 * (double)p_depth[j] - 1.0) * (z_far - z_near));
-            p_png[j] = (uint16_t)(min)(std::round(depth_scale * z_depth),
+            p_png[j] = (uint16_t)(m_min)(std::round(depth_scale * z_depth),
                                           (double)INT16_MAX);
         }
     }
@@ -852,7 +848,7 @@ void MyVisualizer::BuildUtilities() {
 
     // 0. Build coordinate frame
     const auto boundingbox = GetViewControl().GetBoundingBox();
-    double extent = (max)(0.01, boundingbox.GetMaxExtent() * 0.2);
+    double extent = (m_max)(0.01, boundingbox.GetMaxExtent() * 0.2);
     coordinate_frame_mesh_ptr_ = geometry::TriangleMesh::CreateCoordinateFrame(
             extent, boundingbox.min_bound_);
             std::cout << "Build";

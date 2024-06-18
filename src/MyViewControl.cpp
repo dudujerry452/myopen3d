@@ -1,5 +1,6 @@
 
 #include "MyViewControl.h"
+#include "m_util.h"
 
 #include "open3d/utility/Logging.h"
 
@@ -21,11 +22,6 @@
 #include <algorithm>
 
 #define NOMINMAX
-
-#ifndef __APPLE__
-    #define M_PI       3.14159265358979323846
-#endif
-
 
 namespace myvisualization {
 
@@ -56,7 +52,7 @@ void MyViewControl::SetViewMatrices(
         z_near_ =
                 constant_z_near_ > 0
                         ? constant_z_near_
-                        : std::max(0.01 * bounding_box_.GetMaxExtent(),
+                        : m_max(0.01 * bounding_box_.GetMaxExtent(),
                                    distance_ - 3.0 * bounding_box_.GetMaxExtent());
 
 
@@ -134,12 +130,12 @@ void MyViewControl::SetProjectionParameters() {
     right_ = up_.cross(front_).normalized();
     if (GetProjectionType() == ProjectionType::Perspective) {
         view_ratio_ = zoom_ * bounding_box_.GetMaxExtent();
-        distance_ = view_ratio_ / std::tan(field_of_view_ * 0.5 / 180.0 * M_PI);
+        distance_ = view_ratio_ / std::tan(field_of_view_ * 0.5 / 180.0 * m_PI);
         eye_ = lookat_ + front_ * distance_;
     } else {
         view_ratio_ = zoom_ * bounding_box_.GetMaxExtent();
         distance_ =
-                view_ratio_ / std::tan(FIELD_OF_VIEW_STEP * 0.5 / 180.0 * M_PI);
+                view_ratio_ / std::tan(FIELD_OF_VIEW_STEP * 0.5 / 180.0 * m_PI);
         eye_ = lookat_ + front_ * distance_;
     }
 
@@ -148,7 +144,7 @@ void MyViewControl::SetProjectionParameters() {
 
 void MyViewControl::ChangeFieldOfView(double step) {
     field_of_view_ =
-            std::max(std::min(field_of_view_ + step * FIELD_OF_VIEW_STEP,
+            m_max(m_min(field_of_view_ + step * FIELD_OF_VIEW_STEP,
                               FIELD_OF_VIEW_MAX),
                      FIELD_OF_VIEW_MIN);
     SetProjectionParameters();
@@ -190,7 +186,7 @@ open3d::geometry::Ray3D MyViewControl::UnprojectPoint(double x, double y) const 
 }
 
 void MyViewControl::Scale(double scale) {
-    zoom_ = std::max(std::min(zoom_ + scale * ZOOM_STEP, ZOOM_MAX), ZOOM_MIN);
+    zoom_ = m_max(m_min(zoom_ + scale * ZOOM_STEP, ZOOM_MAX), ZOOM_MIN);
     SetProjectionParameters();
 }
 
@@ -240,10 +236,10 @@ void MyViewControl::CameraLocalRotate(double x,
 
     const auto m =
             Eigen::AngleAxisd(
-                    -degrees_per_unit * local_rotate_up_accum_ * M_PI / 180,
+                    -degrees_per_unit * local_rotate_up_accum_ * m_PI / 180,
                     start_local_rotate_right_) *
             Eigen::AngleAxisd(
-                    degrees_per_unit * local_rotate_right_accum_ * M_PI / 180,
+                    degrees_per_unit * local_rotate_right_accum_ * m_PI / 180,
                     start_local_rotate_up_);
 
     front_ = m * start_local_rotate_front_;

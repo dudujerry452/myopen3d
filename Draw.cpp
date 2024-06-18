@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <random>
 
+#include "m_util.h"
+
 #include "MyRenderFunction.h"
 
 #include "open3d/Open3D.h"
@@ -168,7 +170,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::shared_ptr<PointCloud> > draw_points_group;
     std::vector<std::shared_ptr<PointCloud> > temp_draw_points_group;
     // Construct points to draw
-    std::uniform_real_distribution<double> dis(0.0, 2.0*M_PI);
+    std::uniform_real_distribution<double> dis(0.0, 2.0*m_PI);
     for(auto& v : points_coor){
         std::vector<Eigen::Vector3d> v_group;
         v_group.emplace_back(v.head<3>());
