@@ -12,6 +12,7 @@
 #include "m_util.h"
 
 #include "MyRenderFunction.h"
+#include "GeometryFactory.h"
 
 #include "open3d/Open3D.h"
 
@@ -24,32 +25,23 @@ using std::vector;
 
 #define up(l,r,i) for(int i=l;i<=r;i++)
 
-std::shared_ptr<LineSet> getFrameCorrdinate(Eigen::Vector3d dn_bound, Eigen::Vector3d up_bound, Eigen::Vector3d step){
-    std::vector<Eigen::Vector3d> points;
-    std::vector<Eigen::Vector2i> lines;
-
-    for(int dim = 0; dim < 3; dim ++){
-        for(int dim2 = 0; dim2 < 3; dim2 ++){
-            if(dim == dim2) continue;
-            for(double x = dn_bound(dim); x <= up_bound(dim); x += step(dim)){
-                auto db = dn_bound(dim2),ub = up_bound(dim2);
-                Eigen::Vector3d p({0,0,0});
-                p(dim) = x; p(dim2) = db;
-                points.push_back(p);
-                p(dim2) = ub;
-                points.push_back(p);
-                lines.emplace_back(points.size()-2, points.size()-1);
-            }
-        }
-    }
-    auto lineset = std::make_shared<LineSet>(points,lines);
-    return lineset;
-}
-
-
 inline double getDistance(Eigen::Vector3d o1, Eigen::Vector3d o2){
     auto del = o1 - o2;
     return std::sqrt(del.dot(del));
+}
+
+void AddFunction(MyVisualizer* vis, const std::function<double(const Eigen::Vector2d&)> func,
+                 const AxisAlignedBoundingBox& boundingbox,  const double& resolution, 
+                 const Eigen::Vector3d& trans = {0,0,0},  const Eigen::Vector3d& color = {1,0,0}){
+        auto surface = mygeometry::CreateSurface(func, boundingbox, resolution);
+        surface->Translate(trans);
+        surface->ComputeVertexNormals();
+        surface->ComputeTriangleNormals();
+        surface->PaintUniformColor(color);
+        vis->AddGeometry(surface);
+
+        auto cloud = std::make_shared<PointCloud>(surface->vertices_);
+        vis->AddGeometry(cloud);
 }
 
 int main(int argc, char *argv[]) {
@@ -78,7 +70,7 @@ int main(int argc, char *argv[]) {
 
     cout << "[Init] AddGeometry Succeed " << endl;
 
-    auto lineset = getFrameCorrdinate({0,0,0},{100,100,100},{1,1,1});
+    auto lineset = mygeometry::CreateCoordinateFrame({1,1,1},AxisAlignedBoundingBox({-100,-100,0},{100,100,0}));
     scene.AddGeometry(lineset,false,false);
 
     cout << "[Init] Add Frame Corrdinate Succeed " << endl;
@@ -86,12 +78,20 @@ int main(int argc, char *argv[]) {
     //scene.RegisterAnimationCallback(update);
     //cout << "[Init] Animation Function Register Succeed " << endl;
 
-    auto sphere = TriangleMesh::CreateSphere(10,20);
-    sphere->Translate({10,10,10});
-    sphere->ComputeVertexNormals();
-    sphere->ComputeTriangleNormals();
-    sphere->PaintUniformColor({0,1,0});
-    scene.AddGeometry(sphere);
+    std::function<double(const Eigen::Vector2d&)> f = [](const Eigen::Vector2d& coor){
+        auto x = coor(0), y = coor(1);
+        if(x*x + y*y >= 7) return -1.0;
+        return pow(m_E, sin(x) + cos(y));
+    };
+    std::function<double(const Eigen::Vector2d&)> f2 = [](const Eigen::Vector2d& coor){
+        auto x = coor(0), y = coor(1);
+        if(x*x + y*y >= 7) return -1.0;
+        return pow(m_E, x);
+    };
+
+    AddFunction(&scene, f, {{-10,-10,0},{10,10,10}}, 0.1);
+
+    AddFunction(&scene, f2, {{-10,-10,0},{10,10,10}}, 0.1, {10,0,0});
 
     scene.Run();
     scene.DestroyVisualizerWindow();
