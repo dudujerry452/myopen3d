@@ -24,22 +24,25 @@ using std::vector;
 
 #define up(l,r,i) for(int i=l;i<=r;i++)
 
-std::shared_ptr<LineSet> getFrameCorrdinate(double boundx, double boundy, double stepx, double stepy){
+std::shared_ptr<LineSet> getFrameCorrdinate(Eigen::Vector3d dn_bound, Eigen::Vector3d up_bound, Eigen::Vector3d step){
     std::vector<Eigen::Vector3d> points;
     std::vector<Eigen::Vector2i> lines;
-    int timesx = boundx/stepx;
-    int timesy = boundy/stepy;
-    up(0,timesx,i){
-        points.push_back({stepx*i,0,0});
-        points.push_back({stepx*i,boundy,0});
-        lines.push_back({i*2,i*2+1});
+
+    for(int dim = 0; dim < 3; dim ++){
+        for(int dim2 = 0; dim2 < 3; dim2 ++){
+            if(dim == dim2) continue;
+            for(double x = dn_bound(dim); x <= up_bound(dim); x += step(dim)){
+                auto db = dn_bound(dim2),ub = up_bound(dim2);
+                Eigen::Vector3d p({0,0,0});
+                p(dim) = x; p(dim2) = db;
+                points.push_back(p);
+                p(dim2) = ub;
+                points.push_back(p);
+                lines.emplace_back(points.size()-2, points.size()-1);
+            }
+        }
     }
-    up(0,timesy,i){
-        points.push_back({0,stepy*i,0});
-        points.push_back({boundx,stepy*i,0});
-        lines.push_back({(timesx+i+1)*2,(timesx+i+1)*2+1});
-    }
-    auto lineset = std::make_shared<LineSet>(points, lines);
+    auto lineset = std::make_shared<LineSet>(points,lines);
     return lineset;
 }
 
@@ -56,8 +59,6 @@ int main(int argc, char *argv[]) {
 
     MyVisualizer scene;
 
-    auto coordinate_frame = TriangleMesh::CreateCoordinateFrame();
-
     if(!scene.CreateVisualizerWindow("Scene", 1600, 900)){
         std:: cout<<"[Init Error] Window Create Failed" << endl;
         return 1;
@@ -72,23 +73,26 @@ int main(int argc, char *argv[]) {
     }
     std :: cout << "[Init] InitOpenGL Succeed" << endl;
 
-    /*if (glewInit() != GLEW_OK) {
-        std:: cout << "GLEW Intilization Failed" << std::endl;
-        return false;
-    }
-    cout << "Window Created " << endl;*/
-
+    auto coordinate_frame = TriangleMesh::CreateCoordinateFrame(5);
     scene.AddGeometry(coordinate_frame, true, false);
 
     cout << "[Init] AddGeometry Succeed " << endl;
 
-    auto lineset = getFrameCorrdinate(1000,1000,100,100);
+    auto lineset = getFrameCorrdinate({0,0,0},{100,100,100},{1,1,1});
     scene.AddGeometry(lineset,false,false);
 
     cout << "[Init] Add Frame Corrdinate Succeed " << endl;
 
     //scene.RegisterAnimationCallback(update);
-    cout << "[Init] Animation Function Register Succeed " << endl;
+    //cout << "[Init] Animation Function Register Succeed " << endl;
+
+    auto sphere = TriangleMesh::CreateSphere(10,20);
+    sphere->Translate({10,10,10});
+    sphere->ComputeVertexNormals();
+    sphere->ComputeTriangleNormals();
+    sphere->PaintUniformColor({0,1,0});
+    scene.AddGeometry(sphere);
+
     scene.Run();
     scene.DestroyVisualizerWindow();
 
