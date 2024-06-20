@@ -32,8 +32,15 @@ inline double getDistance(Eigen::Vector3d o1, Eigen::Vector3d o2){
 
 void AddFunction(MyVisualizer* vis, const std::function<double(const Eigen::Vector2d&)> func,
                  const AxisAlignedBoundingBox& boundingbox,  const double& resolution, 
-                 const Eigen::Vector3d& trans = {0,0,0},  const Eigen::Vector3d& color = {1,0,0}){
+                 const Eigen::Vector3d& color = {1,0,0},
+                 const Eigen::Vector3d& trans = {0,0,0},
+                 const Eigen::Vector3d& rotateAxis = {0,0,1}, const Eigen::Vector3d& center = {0,0,0},
+                 const double& angle = 0
+                 ){
         auto surface = mygeometry::CreateSurface(func, boundingbox, resolution);
+        auto nrotate = rotateAxis.normalized();
+        Eigen::AngleAxisd rotation(angle, nrotate);
+        surface->Rotate(rotation.matrix(), center);
         surface->Translate(trans);
         surface->ComputeVertexNormals();
         surface->ComputeTriangleNormals();
@@ -75,23 +82,22 @@ int main(int argc, char *argv[]) {
 
     cout << "[Init] Add Frame Corrdinate Succeed " << endl;
 
-    //scene.RegisterAnimationCallback(update);
-    //cout << "[Init] Animation Function Register Succeed " << endl;
-
     std::function<double(const Eigen::Vector2d&)> f = [](const Eigen::Vector2d& coor){
         auto x = coor(0), y = coor(1);
-        if(x*x + y*y >= 7) return -1.0;
-        return pow(m_E, sin(x) + cos(y));
+        if(y <= 4.5*log(x+1) && y >= exp(x/4.5)-1) 
+            return 8/(1+exp(5-0.5*sqrt(x*x+y*y))+(-(30-x)*(30-x)/50)*sqrt((x-y)*(x-y)));
+        return -11.0;
     };
-    std::function<double(const Eigen::Vector2d&)> f2 = [](const Eigen::Vector2d& coor){
-        auto x = coor(0), y = coor(1);
-        if(x*x + y*y >= 7) return -1.0;
-        return pow(m_E, x);
-    };
+    //abs(sin(x*x+2*x*y)) - sin(x-2*y)
+    //2/(1+pow(m_E, 5-2*sqrt(x*x+y*y)));
+    //if(y < exp(x)-1 || y > log(x+1)) return -11.0;
+    //    return 2/(1+exp(5-2*sqrt(x*x+y*y)));
+    //best 彼岸花
+    //return 8/(1+exp(5-0.5*sqrt(x*x+y*y))+(-(30-x)*(30-x)/50)*sqrt((x-y)*(x-y)));
 
-    AddFunction(&scene, f, {{-10,-10,0},{10,10,10}}, 0.1);
-
-    AddFunction(&scene, f2, {{-10,-10,0},{10,10,10}}, 0.1, {10,0,0});
+    for(double i = 0; i < m_PI*2; i += m_PI/4)
+        AddFunction(&scene, f, {{0,0,-10},{20,20,10}}, 0.1,{1,0,0},{0,0,0},{0,0,1},{0,0,0},i);
+    
 
     scene.Run();
     scene.DestroyVisualizerWindow();
