@@ -82,10 +82,36 @@ int main(int argc, char *argv[]) {
 
     cout << "[Init] Add Frame Corrdinate Succeed " << endl;
 
-    std::function<double(const Eigen::Vector2d&)> f = [](const Eigen::Vector2d& coor){
+    std::function<double(const Eigen::Vector2d&)> f0 = [](const Eigen::Vector2d& coor){
         auto x = coor(0), y = coor(1);
+        double ret = 8/(1+exp(5-0.5*sqrt(x*x+y*y))-0.01*((x-y)*(x-y)));
+        if(y <= 5*log(x+1) && y >= exp(x/5)-1) 
+            return ret>0?ret:-11.0;
+        return -11.0;
+    };
+
+    std::function<double(const Eigen::Vector2d&)> f0_5 = [](const Eigen::Vector2d& coor){
+        auto x = coor(0)*1.25, y = coor(1)*1.25;
+        double ret = 8/(1+exp(4-0.5*sqrt(x*x+y*y))-0.01*((x-y)*(x-y)));
         if(y <= 4.5*log(x+1) && y >= exp(x/4.5)-1) 
-            return 8/(1+exp(5-0.5*sqrt(x*x+y*y))+(-(30-x)*(30-x)/50)*sqrt((x-y)*(x-y)));
+            return ret>0?ret:-11.0;
+        return -11.0;
+    };
+
+    std::function<double(const Eigen::Vector2d&)> f1 = [](const Eigen::Vector2d& coor){
+        auto x = coor(0)*1.5, y = coor(1)*1.5;
+        double ret = 8/(1+exp(3-0.5*sqrt(x*x+y*y))-0.01*((x-y)*(x-y)));
+        if(y <= 4.5*log(x+1) && y >= exp(x/4.5)-1) 
+            return ret>0?ret:-11.0;
+        return -11.0;
+    };
+
+
+    std::function<double(const Eigen::Vector2d&)> f2 = [](const Eigen::Vector2d& coor){
+        auto x = coor(0)*3, y = coor(1)*3;
+        double ret = 8/(1+exp(5-0.5*sqrt(x*x+y*y))+(-(30-x)*(30-x)/50)*sqrt((x-y)*(x-y)));
+        if(y <= 4.5*log(x+1) && y >= exp(x/4.5)-1) 
+            return ret>0?ret:-11.0;
         return -11.0;
     };
     //abs(sin(x*x+2*x*y)) - sin(x-2*y)
@@ -95,9 +121,25 @@ int main(int argc, char *argv[]) {
     //best 彼岸花
     //return 8/(1+exp(5-0.5*sqrt(x*x+y*y))+(-(30-x)*(30-x)/50)*sqrt((x-y)*(x-y)));
 
+    //
+    //if(y <= 4.5*log(x+1) && y >= exp(x/4.5)-1) 
+    //        return 8/(1+exp(5-0.5*sqrt(x*x+y*y))+(-(30-x)*(30-x)/50)*sqrt((x-y)*(x-y)));
+
     for(double i = 0; i < m_PI*2; i += m_PI/4)
-        AddFunction(&scene, f, {{0,0,-10},{20,20,10}}, 0.1,{1,0,0},{0,0,0},{0,0,1},{0,0,0},i);
+        AddFunction(&scene, f1, {{0,0,-10},{20,20,10}}, 0.1,{1,0,0},{0,0,-0.5},{0,0,1},{0,0,0},i);
+
+    for(double i = m_PI/3; i < m_PI*2+m_PI/3; i += m_PI/4)
+        AddFunction(&scene, f0_5, {{0,0,-10},{20,20,10}}, 0.1,{1,0,0},{0,0,0},{0,0,1},{0,0,0},i);
+
+    for(double i = 7*m_PI/15; i < m_PI*2+7*m_PI/15; i += m_PI/4)
+        AddFunction(&scene, f0, {{0,0,-10},{20,20,10}}, 0.1,{1,0,0},{0,0,0},{0,0,1},{0,0,0},i);
+
+    for(double i = 0; i < m_PI*2; i += m_PI/4)
+        AddFunction(&scene, f2, {{0,0,-10},{20,20,10}}, 0.05,{1,0,0},{0,0,0},{0,0,1},{0,0,0},i);
+
     
+    
+    //AddFunction(&scene, f, {{-20,-20,-10},{20,20,10}}, 0.1,{1,0,0},{0,0,0},{0,0,1},{0,0,0},0);
 
     scene.Run();
     scene.DestroyVisualizerWindow();
